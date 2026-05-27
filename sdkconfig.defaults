@@ -1,0 +1,10 @@
+# This file was generated using idf.py save-defconfig or menuconfig [D] key. It can be edited manually.
+# Espressif IoT Development Framework (ESP-IDF) 6.0.1 Project Minimal Configuration
+#
+# default:
+CONFIG_IDF_TARGET="esp32s3"
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESP_WIFI_SSID="ESP2"
+CONFIG_ESP_WIFI_PASSWORD="Stepan030492"
+CONFIG_HTTPD_WS_SUPPORT=y
+CONFIG_ESP_WIFI_ENABLE_WPA3_SAE=n
