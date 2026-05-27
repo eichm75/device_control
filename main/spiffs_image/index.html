@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>ESP32-S3 Control</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding-top: 50px; }
+        .btn { padding: 20px 40px; font-size: 20px; cursor: pointer; margin: 10px; border: none; border-radius: 8px; color: white; }
+        .on { background-color: #4CAF50; }
+        .off { background-color: #f44336; }
+    </style>
+</head>
+<body>
+    <h1>Управление ESP32-S3</h1>
+    <button class="btn on" onclick="send('LED_ON')">ВКЛЮЧИТЬ</button>
+    <button class="btn off" onclick="send('LED_OFF')">ВЫКЛЮЧИТЬ</button>
+
+    <script>
+        // Создаем путь ws://192.168.4.1/ws
+        var gateway = `ws://${window.location.hostname}/ws`;
+        var websocket;
+
+        function initWebSocket() {
+            websocket = new WebSocket(gateway);
+            websocket.onopen = () => console.log('Соединение установлено');
+            websocket.onclose = () => setTimeout(initWebSocket, 2000); // Реконнект при обрыве
+        }
+
+        function send(message) {
+            websocket.send(message); // Отправляем простую строку
+        }
+
+        window.onload = initWebSocket;
+    </script>
+</body>
+</html>
