@@ -73,6 +73,50 @@ void wifi_init_softap(void)
              EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS, EXAMPLE_ESP_WIFI_CHANNEL);
 }
 
+httpd_handle_t setup_websocket_server(void)
+{
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+
+    httpd_uri_t uri_get = {
+        .uri = "/",
+        .method = HTTP_GET,
+        .handler = index_get_handler,
+        .user_ctx = NULL};
+
+    httpd_uri_t ws = {
+        .uri = "/ws",
+        .method = HTTP_GET,
+        .handler = handle_ws_req,
+        .user_ctx = NULL,
+        .is_websocket = true};
+
+    if (httpd_start(&server, &config) == ESP_OK) {
+        httpd_register_uri_handler(server, &uri_get);
+        httpd_register_uri_handler(server, &ws);
+    }
+
+    return server;
+}
+
+esp_err_t index_get_handler(httpd_req_t *req)
+{
+    FILE* f= fopen("/spiffs/index.html", "r");
+    if (f == NULL) {
+        ESP_LOGE(TAG, "Failed to open index.html");
+        httpd_resp_send_404(req);
+        return ESP_FAIL;
+    }
+
+    httpd_resp_set_type(req, "text/html");
+    char line[128];
+    while (fgets(line,sizeof(line), f)) {
+        httpd_resp_sendstr_chunk(req, line);
+    }
+    fclose(f);
+    httpd_resp_sendstr_chunk(req, NULL);
+    return ESP_OK;
+}
+
 void start_control_server(void)
 {
         //Initialize NVS
