@@ -7,13 +7,14 @@
 #include "esp_wifi.h"
 #include "esp_event.h"
 #include "esp_log.h"
-#include "nvs_flash.h"
 #include "esp_spiffs.h"
 #include "esp_system.h"
 #include <esp_http_server.h>
 
 #include "lwip/err.h"
 #include "lwip/sys.h"
+
+#include "common_types.h"
 
 httpd_handle_t server = NULL;
 
@@ -23,7 +24,46 @@ httpd_handle_t server = NULL;
 #define EXAMPLE_MAX_STA_CONN       CONFIG_ESP_MAX_STA_CONN
 
 static const char *TAG = "Control Server";
+static QueueHandle_t incoming_messages_queue;
 
+// функция получения дескриптора очереди входящих сообщений, объявленной в main.c
+void set_incoming_messages_queue(QueueHandle_t queue)
+{
+    incoming_messages_queue = queue;
+}
+
+// функция для инициализации SPIFFS, которая настраивает параметры файловой системы, регистрирует ее и выводит информацию о размере и использовании раздела SPIFFS в лог
+void init_spiffs(void)
+{
+    esp_vfs_spiffs_conf_t conf = {
+      .base_path = "/spiffs",
+      .partition_label = NULL,
+      .max_files = 5,
+      .format_if_mount_failed = true
+    };
+
+    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+
+    if (ret != ESP_OK) {
+        if (ret == ESP_FAIL) {
+            ESP_LOGE(TAG, "Failed to mount or format filesystem");
+        } else if (ret == ESP_ERR_NOT_FOUND) {
+            ESP_LOGE(TAG, "Failed to find SPIFFS partition");
+        } else {
+            ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+        }
+        return;
+    }
+    size_t total = 0, used = 0;
+    ret = esp_spiffs_info(NULL, &total, &used);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "SPIFFS Partition size: total: %d, used: %d", total, used);
+    }
+}
+
+// функция для обработки событий Wi-Fi, которая регистрирует события подключения и отключения клиентов от точки доступа и выводит информацию о них в лог
 static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
     if (event_id == WIFI_EVENT_AP_STACONNECTED) {
@@ -37,6 +77,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
     }
 }
 
+// функция для инициализации Wi-Fi в режиме точки доступа, которая настраивает параметры точки доступа, такие как SSID, пароль, 
+// канал и максимальное количество подключений, и запускает Wi-Fi
 void wifi_init_softap(void)
 {
     ESP_ERROR_CHECK(esp_netif_init());
@@ -73,6 +115,83 @@ void wifi_init_softap(void)
              EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS, EXAMPLE_ESP_WIFI_CHANNEL);
 }
 
+
+
+// функция для обработки GET запроса на корневой URI "/", которая читает файл index.html из SPIFFS и отправляет его содержимое клиенту
+esp_err_t index_get_handler(httpd_req_t *req)
+{
+    // открываем файл index.html для чтения
+    FILE* f= fopen("/spiffs/index.html", "r");
+    if (f == NULL) {
+        ESP_LOGE(TAG, "Failed to open index.html");
+        httpd_resp_send_404(req);
+        return ESP_FAIL;
+    }
+    // устанавливаем тип содержимого ответа как "text/html"
+    httpd_resp_set_type(req, "text/html");
+    // line - буфер для чтения строк из файла index.html
+    char line[128];
+    // читаем файл index.html построчно и отправляем каждую строку клиенту с помощью функции httpd_resp_sendstr_chunk
+    while (fgets(line,sizeof(line), f)) {
+        httpd_resp_sendstr_chunk(req, line);
+    }
+    fclose(f);
+    // отправляем пустой чанк для обозначения конца ответа
+    httpd_resp_sendstr_chunk(req, NULL);
+    return ESP_OK;
+}
+
+// функция для обработки запросов на URI "/ws", которая обрабатывает рукопожатие при подключении клиента к веб-сокет серверу и принимает кадры данных от клиента, 
+// помещая их в очередь входящих сообщений для дальнейшей обработки исполнительными модулями. *req - указатель на структуру httpd_req_t, которая содержит информацию 
+// о запросе от клиента, такую как метод запроса, URI и данные запроса. функция возвращает esp_err_t, который указывает на результат 
+// обработки запроса (ESP_OK для успешной обработки или ESP_FAIL для ошибки)
+esp_err_t handle_ws_req(httpd_req_t *req)
+{
+    incoming_message_t msg;
+    msg.source = WEB_SERVER;
+    msg.client_id = httpd_req_to_sockfd(req);
+
+    // если метод запроса - GET, то это означает, что клиент только что подключился к веб-сокет серверу и завершил рукопожатие, 
+    // поэтому мы выводим сообщение в лог и возвращаем ESP_OK
+    if (req->method == HTTP_GET)
+    {
+        ESP_LOGI(TAG, "Handshake done, the new connection was opened");
+        return ESP_OK;
+    }
+
+    // принимаем кадры данных websocket
+    httpd_ws_frame_t ws_pkt; // структура для хранения информации о кадре данных websocket, которая включает в себя тип кадра, флаг окончания кадра и указатель на буфер данных
+    uint8_t *buf = NULL;    // указатель на буфер для хранения данных кадра, который будет выделен динамически в зависимости от размера данных, полученных от клиента
+    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));    // инициализируем структуру ws_pkt нулями, чтобы очистить все поля и избежать мусора в данных
+    ws_pkt.type = HTTPD_WS_TYPE_TEXT;   // устанавливаем тип кадра как текстовый, так как мы ожидаем получать текстовые сообщения от клиента через веб-сокеты
+
+    esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);   // вызываем функцию httpd_ws_recv_frame для получения информации о размере данных кадра от клиента,
+                                                            //  передавая указатель на структуру ws_pkt и размер буфера 0, чтобы узнать размер данных
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "httpd_ws_recv_frame failed to get frame size: %d", ret);
+        return ret;
+    }
+    if (ws_pkt.len > 0) {
+        buf = calloc(1, ws_pkt.len + 1);   // выделяем динамический буфер для хранения данных кадра, добавляя 1 байт для нулевого терминатора строки
+        ws_pkt.payload = buf;   // устанавливаем указатель на буфер в структуре ws_pkt, чтобы функция httpd_ws_recv_frame могла записать данные кадра в этот буфер
+        ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);    // вызываем функцию httpd_ws_recv_frame снова для получения данных кадра от клиента, 
+                                                                // передавая указатель на структуру ws_pkt и размер буфера, который мы выделили
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "httpd_ws_recv_frame failed to receive frame: %d", ret);
+            free(buf);
+            return ret;
+        }
+
+        strncpy(msg.data, (char*)ws_pkt.payload, sizeof(msg.data) - 1);     // копируем данные из буфера в поле data структуры msg, 
+                                                                            // ограничивая размер копируемых данных размером поля data минус 1 байт 
+                                                                            // для нулевого терминатора строки
+        xQueueSend(incoming_messages_queue, &msg, 0);                       // помещаем структуру msg в очередь входящих сообщений
+        free(buf); 
+    }
+    return ESP_OK;
+}
+
+// функция для настройки и запуска веб-сокет сервера, которая регистрирует обработчики URI для корневого URI "/" и URI "/ws", и возвращает дескриптор сервера
 httpd_handle_t setup_websocket_server(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -98,35 +217,14 @@ httpd_handle_t setup_websocket_server(void)
     return server;
 }
 
-esp_err_t index_get_handler(httpd_req_t *req)
-{
-    FILE* f= fopen("/spiffs/index.html", "r");
-    if (f == NULL) {
-        ESP_LOGE(TAG, "Failed to open index.html");
-        httpd_resp_send_404(req);
-        return ESP_FAIL;
-    }
-
-    httpd_resp_set_type(req, "text/html");
-    char line[128];
-    while (fgets(line,sizeof(line), f)) {
-        httpd_resp_sendstr_chunk(req, line);
-    }
-    fclose(f);
-    httpd_resp_sendstr_chunk(req, NULL);
-    return ESP_OK;
-}
-
 void start_control_server(void)
 {
-        //Initialize NVS
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
-
+    // инициализируем SPIFFS, который будет использоваться для хранения файлов веб-сокет сервера
+    init_spiffs();
+    // инициализируем Wi-Fi в режиме точки доступа, который будет использоваться для подключения клиентов к веб-сокет серверу
     ESP_LOGI(TAG, "ESP_WIFI_MODE_AP");
+    // функция для инициализации Wi-Fi в режиме точки доступа
     wifi_init_softap();
+    // настраиваем и запускаем веб-сокет сервер, который будет обрабатывать запросы от клиентов и отправлять им данные через веб-сокеты
+    setup_websocket_server();
 }
