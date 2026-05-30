@@ -13,14 +13,16 @@ void incoming_messages_manager(void *pvParameters) {
     incoming_message_t message;
     while (1) {
         if (xQueueReceive(incoming_messages_queue, &message, portMAX_DELAY)) {
-            ESP_LOGI(TAG, "Received message: %s", message.data);
-            //free(message.data);
+            ESP_LOGI(TAG,  ANSI_COLOR_BLUE "Получено сообщение: %s" ANSI_COLOR_RESET, message.data);
         }
     }
 }
 
 void app_main(void)
 {
+    esp_log_level_set("*",ESP_LOG_WARN);
+    esp_log_level_set("Device Control Main", ESP_LOG_INFO);
+
     // инициализируем NVS, который будет использоваться для хранения данных конфигурации Wi-Fi и других параметров
     esp_err_t ret = nvs_flash_init();
 

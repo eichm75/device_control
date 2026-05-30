@@ -14,3 +14,6 @@ typedef struct {
     int client_id;
     char data[64]; // данные сообщения
 } incoming_message_t;
+
+#define ANSI_COLOR_BLUE    "\033[0;34m"
+#define ANSI_COLOR_RESET   "\033[0m"
