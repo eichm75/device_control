@@ -2,6 +2,25 @@
     файл содержит глобальные типы данных и константы, которые используются в других файлах проекта.
 */
 
+/*
+    Предварительное описание структуры входящего сообщения.
+    Устройство должно управляться через сообщения, поступающие из различных источников. Например: websocket сервер или сенсорная
+    панель управления на корпусе устройства. Сообщение определяется структурой incoming_message_t и должно содержать 
+    следующую информацию:
+        Поле source - дескриптор источника сообщения. Например: WEB_SERVER или CONTROL_PANEL.
+        Поле client_id - идентификатор клиента, отправившего сообщение. Так как через websocket сервер может быть
+            подключено несколько клиентов, идентификатор будет определять номер клиента сервера.
+            В случае сенсорной панели управления, идентификатор клиента может быть 0 или -1. 
+        Поле data - строка, содержащая дескриптор исполнительного модуля, саму команду и 
+            необходимые параметры команды, разделенные двоеточиями.
+    Соответственно, получается такая структура строки incoming_message_t.data - [executor_id]:[command]:[parameters]
+    Следующими макросами опредеяются константы, ограничивающие длину каждой части строки data и ее общую длину.
+*/
+#define EXECUTOR_ID_LENGTH 3
+#define COMMAND_LENGTH 8
+#define PARAMETERS_LENGTH 4
+#define INCOMING_MESSAGE_DATA_LENGTH (EXECUTOR_ID_LENGTH + COMMAND_LENGTH + PARAMETERS_LENGTH + 2) // +2 для разделителей ":"
+
 // источник поступившего сообщения
 typedef enum {
     WEB_SERVER,
@@ -12,8 +31,19 @@ typedef enum {
 typedef struct {
     source_message_t source; // источник сообщения
     int client_id;
-    char data[64]; // данные сообщения
+    char data[INCOMING_MESSAGE_DATA_LENGTH]; // данные сообщения
 } incoming_message_t;
 
-#define ANSI_COLOR_BLUE    "\033[0;34m"
+
+
+// ANSI escape codes для цветного вывода в терминале
 #define ANSI_COLOR_RESET   "\033[0m"
+#define ANSI_COLOR_BLACK   "\033[0;30m"
+#define ANSI_COLOR_RED     "\033[0;31m"
+#define ANSI_COLOR_GREEN   "\033[0;32m"
+#define ANSI_COLOR_YELLOW  "\033[0;33m"
+#define ANSI_COLOR_BLUE    "\033[0;34m"
+#define ANSI_COLOR_MAGENTA "\033[0;35m"
+#define ANSI_COLOR_CYAN    "\033[0;36m"
+#define ANSI_COLOR_WHITE   "\033[0;37m"
+
