@@ -18,7 +18,7 @@ void incoming_messages_manager(void *pvParameters) {
     incoming_message_t message;
 
     char executor_id[EXECUTOR_ID_LENGTH + 1]; // буфер для хранения идентификатора исполнительного модуля
-    char command[COMMAND_LENGTH + PARAMETERS_LENGTH + 1]; // буфер для хранения пары "команда + параметры"
+    char command_block[COMMAND_LENGTH + PARAMETERS_LENGTH + 2]; // буфер для хранения пары "команда + параметр"
     
     while (1) {
         if (xQueueReceive(incoming_messages_queue, &message, portMAX_DELAY) == pdTRUE) {
@@ -27,10 +27,10 @@ void incoming_messages_manager(void *pvParameters) {
             executor_id[sizeof(executor_id) - 1] = '\0';
 
             // извлекаем команду из данных сообщения
-            strncpy(command, message.data + (EXECUTOR_ID_LENGTH+1), COMMAND_LENGTH);
-            command[sizeof(command) - 1] = '\0';
+            strncpy(command_block, message.data + (EXECUTOR_ID_LENGTH+1), (COMMAND_LENGTH + PARAMETERS_LENGTH + 1));
+            command_block[sizeof(command_block) - 1] = '\0';
         }
-        ESP_LOGI(TAG, ANSI_COLOR_BLUE"Поступило сообщение от клиента %d: executor_id=%s, command=%s"ANSI_COLOR_RESET, message.client_id, executor_id, command);
+        ESP_LOGI(TAG, ANSI_COLOR_BLUE"Поступило сообщение от клиента %d: executor_id=%s, command_block=%s"ANSI_COLOR_RESET, message.client_id, executor_id, command_block);
     }
 }
 
