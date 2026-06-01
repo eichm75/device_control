@@ -59,6 +59,7 @@ void app_main(void)
 
     // создаем очередь для входящих сообщений от модулей управления устройством
     incoming_messages_queue = xQueueCreate(10, sizeof(incoming_message_t));
+    incoming_commands_em1_queue = xQueueCreate(10, sizeof());
 
     // передать дескриптор очереди входящих сообщений в модуль control_server, чтобы он мог помещать в нее сообщения, полученные от клиентов через веб-сокеты
     set_incoming_messages_queue(incoming_messages_queue);
