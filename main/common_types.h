@@ -17,8 +17,8 @@
     Следующими макросами опредеяются константы, ограничивающие длину каждой части строки data и ее общую длину.
 */
 #define EXECUTOR_ID_LENGTH 3
-#define COMMAND_LENGTH 4
-#define PARAMETERS_LENGTH 4
+#define COMMAND_LENGTH 10
+#define PARAMETERS_LENGTH 6
 #define INCOMING_MESSAGE_DATA_LENGTH (EXECUTOR_ID_LENGTH + COMMAND_LENGTH + PARAMETERS_LENGTH + 2) // +2 для разделителей ":"
 
 // источник поступившего сообщения

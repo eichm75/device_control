@@ -18,19 +18,26 @@ void incoming_messages_manager(void *pvParameters) {
     incoming_message_t message;
 
     char executor_id[EXECUTOR_ID_LENGTH + 1]; // буфер для хранения идентификатора исполнительного модуля
-    char command_block[COMMAND_LENGTH + PARAMETERS_LENGTH + 2]; // буфер для хранения пары "команда + параметр"
-    
+    //char command_block[COMMAND_LENGTH + PARAMETERS_LENGTH + 2]; // буфер для хранения пары "команда + параметр"
+    char command[COMMAND_LENGTH + 1]; // буфер для хранения команды
+    char parameters[PARAMETERS_LENGTH + 1]; // буфер для хранения параметров команды
+
+
     while (1) {
         if (xQueueReceive(incoming_messages_queue, &message, portMAX_DELAY) == pdTRUE) {
             // извлекаем идентификатор исполнительного модуля из данных сообщения
             strncpy(executor_id, message.data, EXECUTOR_ID_LENGTH); // копируем первые EXECUTOR_ID_LENGTH символов из данных сообщения в буфер executor_id
             executor_id[sizeof(executor_id) - 1] = '\0';
 
+            sscanf(message.data + (EXECUTOR_ID_LENGTH + 1), "%[^:]:%s", command, parameters); // извлекаем команду и параметры 
+            // из данных сообщения, используя форматирование строки
+            command[sizeof(command) - 1] = '\0'; // гарантируем, что строка команды заканчивается нулевым символом
+            parameters[sizeof(parameters) - 1] = '\0'; // гарантируем, чтострока параметров заканчивается нулевым символом
             // извлекаем команду из данных сообщения
-            strncpy(command_block, message.data + (EXECUTOR_ID_LENGTH+1), (COMMAND_LENGTH + PARAMETERS_LENGTH + 1));
-            command_block[sizeof(command_block) - 1] = '\0';
+            //strncpy(command_block, message.data + (EXECUTOR_ID_LENGTH+1), (COMMAND_LENGTH + PARAMETERS_LENGTH + 1));
+            //command_block[sizeof(command_block) - 1] = '\0';
         }
-        ESP_LOGI(TAG, ANSI_COLOR_BLUE"Поступило сообщение от клиента %d: executor_id=%s, command_block=%s"ANSI_COLOR_RESET, message.client_id, executor_id, command_block);
+        ESP_LOGI(TAG, ANSI_COLOR_BLUE"Поступило сообщение от клиента %d: executor_id=%s, command=%s, parameters=%s"ANSI_COLOR_RESET, message.client_id, executor_id, command, parameters);
     }
 }
 

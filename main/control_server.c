@@ -181,9 +181,9 @@ esp_err_t handle_ws_req(httpd_req_t *req)
         }
 
         strncpy(msg.data, (char*)ws_pkt.payload, sizeof(msg.data));     // копируем данные из буфера в поле data структуры msg, 
-        //msg.data[sizeof(msg.data) - 1] = '\0';                             // ограничивая размер копируемых данных размером поля data минус 1 байт 
-                                                                            // для нулевого терминатора строки
+
         xQueueSend(incoming_messages_queue, &msg, 0);                       // помещаем структуру msg в очередь входящих сообщений
+        
         free(buf); 
     }
     return ESP_OK;
