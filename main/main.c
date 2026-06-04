@@ -11,12 +11,21 @@ QueueHandle_t incoming_messages_queue;
 QueueHandle_t incoming_commands_em1_queue;
 QueueHandle_t incoming_commands_em2_queue;
 
+char* get_source_name(source_message_t source) {
+    switch(source) {
+        case WEB_SERVER: return "WEB_SERVER";
+        case CONTROL_PANEL: return "CONTROL_PANEL";
+        case UNKNOWN_SOURCE: return "UNKNOWN_SOURCE";
+        default: return "UNKNOWN";
+    }
+}
+
 // задача Менеджер входящих сообщений, которая будет получать сообщения от управляющих модулей через очередь и распределять их 
 // между исполнительными модулями
 void incoming_messages_manager(void *pvParameters) {
-    
+    source_message_t source = UNKNOWN_SOURCE; // переменная для хранения источника сообщения, которая будет извлекаться из структуры incoming_message_t при получении сообщения из очереди
     incoming_message_t message;
-
+    
     char executor_id[EXECUTOR_ID_LENGTH + 1]; // буфер для хранения идентификатора исполнительного модуля
     //char command_block[COMMAND_LENGTH + PARAMETERS_LENGTH + 2]; // буфер для хранения пары "команда + параметр"
     char command[COMMAND_LENGTH + 1]; // буфер для хранения команды
@@ -25,19 +34,18 @@ void incoming_messages_manager(void *pvParameters) {
 
     while (1) {
         if (xQueueReceive(incoming_messages_queue, &message, portMAX_DELAY) == pdTRUE) {
-            // извлекаем идентификатор исполнительного модуля из данных сообщения
-            strncpy(executor_id, message.data, EXECUTOR_ID_LENGTH); // копируем первые EXECUTOR_ID_LENGTH символов из данных сообщения в буфер executor_id
+            // извлекаем источник сообщения
+            source = message.source;
+            // копируем первые EXECUTOR_ID_LENGTH символов из данных сообщения в буфер executor_id
+            strncpy(executor_id, message.data, EXECUTOR_ID_LENGTH); 
             executor_id[sizeof(executor_id) - 1] = '\0';
-
-            sscanf(message.data + (EXECUTOR_ID_LENGTH + 1), "%[^:]:%s", command, parameters); // извлекаем команду и параметры 
-            // из данных сообщения, используя форматирование строки
-            command[sizeof(command) - 1] = '\0'; // гарантируем, что строка команды заканчивается нулевым символом
-            parameters[sizeof(parameters) - 1] = '\0'; // гарантируем, чтострока параметров заканчивается нулевым символом
-            // извлекаем команду из данных сообщения
-            //strncpy(command_block, message.data + (EXECUTOR_ID_LENGTH+1), (COMMAND_LENGTH + PARAMETERS_LENGTH + 1));
-            //command_block[sizeof(command_block) - 1] = '\0';
+            // извлекаем команду и параметры из данных сообщения, используя форматирование строки
+            sscanf(message.data + (EXECUTOR_ID_LENGTH + 1), "%[^:]:%s", command, parameters); 
+            command[sizeof(command) - 1] = '\0';
+            parameters[sizeof(parameters) - 1] = '\0';
         }
-        ESP_LOGI(TAG, ANSI_COLOR_BLUE"Поступило сообщение от клиента %d: executor_id=%s, command=%s, parameters=%s"ANSI_COLOR_RESET, message.client_id, executor_id, command, parameters);
+        ESP_LOGI(TAG, ANSI_COLOR_BLUE"Поступило сообщение от источника %s: executor_id=%s, command=%s, parameters=%s"ANSI_COLOR_RESET, get_source_name(source), executor_id, command, parameters);
+    
     }
 }
 
@@ -59,7 +67,7 @@ void app_main(void)
 
     // создаем очередь для входящих сообщений от модулей управления устройством
     incoming_messages_queue = xQueueCreate(10, sizeof(incoming_message_t));
-    incoming_commands_em1_queue = xQueueCreate(10, sizeof());
+    //incoming_commands_em1_queue = xQueueCreate(10, sizeof());
 
     // передать дескриптор очереди входящих сообщений в модуль control_server, чтобы он мог помещать в нее сообщения, полученные от клиентов через веб-сокеты
     set_incoming_messages_queue(incoming_messages_queue);

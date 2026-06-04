@@ -14,7 +14,8 @@
     <h1>Управление ESP32-S3</h1>
     <button class="btn on" onclick="send('MLC:LED_ON:123456')">ВКЛЮЧИТЬ</button>
     <button class="btn off" onclick="send('MLC:LED_OFF:567')">ВЫКЛЮЧИТЬ</button>
-
+    <button class="btn on" onclick="send('MLC:SET_BRIGHTNESS:75')">ЯРКОСТЬ</button>
+    <button class="btn off" onclick="send('MLC:GET_STATUS:')">СТАТУС</button>
     <script>
         // Создаем путь ws://192.168.4.1/ws
         var gateway = `ws://${window.location.hostname}/ws`;

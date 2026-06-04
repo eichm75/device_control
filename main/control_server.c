@@ -147,7 +147,6 @@ esp_err_t handle_ws_req(httpd_req_t *req)
 {
     incoming_message_t msg;
     msg.source = WEB_SERVER;
-    msg.client_id = httpd_req_to_sockfd(req);
 
     // если метод запроса - GET, то это означает, что клиент только что подключился к веб-сокет серверу и завершил рукопожатие, 
     // поэтому мы выводим сообщение в лог и возвращаем ESP_OK
