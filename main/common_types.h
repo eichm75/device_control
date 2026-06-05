@@ -35,6 +35,7 @@
 #define COMMAND_LENGTH 15
 #define PARAMETERS_LENGTH 6
 #define INCOMING_MESSAGE_DATA_LENGTH (EXECUTOR_ID_LENGTH + COMMAND_LENGTH + PARAMETERS_LENGTH + 2) // +2 для разделителей ":"
+#define INCOMING_COMMAND_INFO_LENGTH (COMMAND_LENGTH + PARAMETERS_LENGTH + 1) // +1 для разделителя ":"
 
 // источник поступившего сообщения
 typedef enum {
@@ -49,7 +50,11 @@ typedef struct {
     char data[INCOMING_MESSAGE_DATA_LENGTH]; // данные сообщения
 } incoming_message_t;
 
-
+// структура для хранения информации о команде и ее параметре
+typedef struct {
+    char command[COMMAND_LENGTH]; // команда
+    char parameters[PARAMETERS_LENGTH]; // параметр команды
+} incoming_command_info_t;
 
 // ANSI escape codes для цветного вывода в терминале
 #define ANSI_COLOR_RESET   "\033[0m"

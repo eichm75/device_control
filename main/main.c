@@ -9,7 +9,6 @@ static const char *TAG = "Device Control Main";
 
 QueueHandle_t incoming_messages_queue;
 QueueHandle_t incoming_commands_em1_queue;
-QueueHandle_t incoming_commands_em2_queue;
 
 char* get_source_name(source_message_t source) {
     switch(source) {
@@ -36,6 +35,9 @@ void incoming_messages_manager(void *pvParameters) {
         if (xQueueReceive(incoming_messages_queue, &message, portMAX_DELAY) == pdTRUE) {
             // извлекаем источник сообщения
             source = message.source;
+            memset(executor_id, 0, sizeof(executor_id));
+            memset(command, 0, sizeof(command));
+            memset(parameters, 0, sizeof(parameters));
             // копируем первые EXECUTOR_ID_LENGTH символов из данных сообщения в буфер executor_id
             strncpy(executor_id, message.data, EXECUTOR_ID_LENGTH); 
             executor_id[sizeof(executor_id) - 1] = '\0';
@@ -65,12 +67,14 @@ void app_main(void)
     // проверяем результат инициализации NVS и выводим сообщение об ошибке, если она произошла
     ESP_ERROR_CHECK(ret);
 
-    // создаем очередь для входящих сообщений от модулей управления устройством
+    // создаем очередь для входящих сообщений для Менеджера входящих команд.
     incoming_messages_queue = xQueueCreate(10, sizeof(incoming_message_t));
-    //incoming_commands_em1_queue = xQueueCreate(10, sizeof());
+    incoming_commands_em1_queue = xQueueCreate(10, sizeof(incoming_commands_info_t));
 
     // передать дескриптор очереди входящих сообщений в модуль control_server, чтобы он мог помещать в нее сообщения, полученные от клиентов через веб-сокеты
     set_incoming_messages_queue(incoming_messages_queue);
+    // передать дескриптор очереди входящих команд в исполнительный модуль 1, чтобы он мог получать команды, предназначенные для него, из этой очереди
+    set_incoming_commands_em1_queue(incoming_commands_em1_queue);
     // создаем задачу Менеджер входящих сообщений, которая будет распределять входящие сообщения от модулей управления устройством и распределять их
     // между исполнительными модулями
     xTaskCreate(incoming_messages_manager, "incoming_messages_manager", 4096, NULL, 5, NULL);
