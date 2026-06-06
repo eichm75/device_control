@@ -40,10 +40,13 @@ void incoming_messages_manager(void *pvParameters) {
 
             // копируем первые EXECUTOR_ID_LENGTH символов из данных сообщения в буфер executor_id
             strncpy(executor_id, message.data, EXECUTOR_ID_LENGTH); 
-
+            if (strncmp(executor_id, "EM1", EXECUTOR_ID_LENGTH) == 0) {
             // извлекаем команду и параметры из данных сообщения, используя форматирование строки
             sscanf(message.data + (EXECUTOR_ID_LENGTH + 1), "%[^:]:%s", command_info.command, command_info.parameter);
             xQueueSend(incoming_commands_em1_queue, &command_info, 0); // помещаем распарсенную информацию о команде в очередь для Исполнительного модуля 1
+            } else {
+                ESP_LOGW(TAG, ANSI_COLOR_YELLOW"Received message with unknown executor_id: %s"ANSI_COLOR_RESET, executor_id);
+            }
         }
 
     }
