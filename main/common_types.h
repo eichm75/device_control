@@ -33,9 +33,9 @@
 */
 #define EXECUTOR_ID_LENGTH 3
 #define COMMAND_LENGTH 15
-#define PARAMETERS_LENGTH 6
-#define INCOMING_MESSAGE_DATA_LENGTH (EXECUTOR_ID_LENGTH + COMMAND_LENGTH + PARAMETERS_LENGTH + 2) // +2 для разделителей ":"
-#define INCOMING_COMMAND_INFO_LENGTH (COMMAND_LENGTH + PARAMETERS_LENGTH + 1) // +1 для разделителя ":"
+#define PARAMETER_LENGTH 6
+#define INCOMING_MESSAGE_DATA_LENGTH (EXECUTOR_ID_LENGTH + COMMAND_LENGTH + PARAMETER_LENGTH + 2) // +2 для разделителей ":"
+#define INCOMING_COMMAND_INFO_LENGTH (COMMAND_LENGTH + PARAMETER_LENGTH + 1) // +1 для разделителя ":"
 
 // источник поступившего сообщения
 typedef enum {
@@ -44,16 +44,16 @@ typedef enum {
     CONTROL_PANEL
 } source_message_t;
 
-// структура для хранения информации о сообщении, которая включает в себя источник сообщения, идентификатор клиента и данные сообщения
+// тип данных для передачи управляющих сообщений от модулей управления устройством в Менеджер входящих сообщений. 
 typedef struct {
     source_message_t source; // источник сообщения
     char data[INCOMING_MESSAGE_DATA_LENGTH]; // данные сообщения
 } incoming_message_t;
 
-// структура для хранения информации о команде и ее параметре
+// тип данных для передачи распарсенной информации о команде от Менеджера входящих сообщений в исполнительные модули.
 typedef struct {
     char command[COMMAND_LENGTH]; // команда
-    char parameters[PARAMETERS_LENGTH]; // параметр команды
+    char parameter[PARAMETER_LENGTH]; // параметр команды
 } incoming_command_info_t;
 
 // ANSI escape codes для цветного вывода в терминале
