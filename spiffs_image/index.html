@@ -5,19 +5,32 @@
     <title>ESP32-S3 Control</title>
     <style>
         body { font-family: sans-serif; text-align: center; padding-top: 50px; }
-        .btn { padding: 20px 40px; font-size: 20px; cursor: pointer; margin: 10px; border: none; border-radius: 8px; color: white; }
-        .on { background-color: #4CAF50; }
-        .off { background-color: #f44336; }
+        .btn { padding: 20px 40px; font-size: 20px; cursor: pointer; margin: 10px; border: none; border-radius: 8px; color: white; background-color: #4CAF50;}
     </style>
 </head>
 <body>
     <h1>Управление ESP32-S3</h1>
-    <button class="btn on" onclick="send('EM1:LED_ON:75')">ВКЛЮЧИТЬ</button>
-    <button class="btn off" onclick="send('EM1:LED_OFF:567')">ВЫКЛЮЧИТЬ</button>
-    <button class="btn on" onclick="send('EM2:SET_BRIGHTNESS:75')">ЯРКОСТЬ</button>
-    <button class="btn off" onclick="send('EM1:GET_STATUS:')">СТАТУС</button>
-    <button class="btn on" onclick="send('EM2:REBOOT:')">ПЕРЕЗАГРУЗКА</button>
-    <button class="btn off" onclick="send('EM3:GET_SENSOR_DATA:5')">ДАННЫЕ ДАТЧИКА</button>
+    <div>
+        <h2>Модуль управления 1</h2>
+        <button class="btn" onclick="send('EM1:COMMAND1:10')">Команда 1</button>
+        <button class="btn" onclick="send('EM1:COMMAND2:20')">Команда 2</button>
+        <button class="btn" onclick="send('EM1:COMMAND3:')">Команда 3</button>
+    </div>
+
+    <div>
+        <h2>Модуль управления 2</h2>
+        <button class="btn" onclick="send('EM2:COMMAND1:10')">Команда 1</button>
+        <button class="btn" onclick="send('EM2:COMMAND2:20')">Команда 2</button>
+        <button class="btn" onclick="send('EM2:COMMAND3:')">Команда 3</button>
+    </div>
+
+    <div>
+        <h2>Модуль управления 3</h2>
+        <button class="btn" onclick="send('EM3:COMMAND1:10')">Команда 1</button>
+        <button class="btn" onclick="send('EM3:COMMAND2:20')">Команда 2</button>
+        <button class="btn" onclick="send('EM3:COMMAND3:')">Команда 3</button>
+    </div>
+
 </body>
     <script>
         // Создаем путь ws://192.168.4.1/ws
