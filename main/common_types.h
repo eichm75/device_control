@@ -3,7 +3,6 @@
 */
 
 /*
-
     Предварительное описание механизма управления устройством.
     Устройство будет состоять из нескольких программно-аппаратных модулей:
         - плата с процессором dsp, задача которой принимать на вход аудиосигнал, обрабатывать его, передавать на усилители. Параллельно, dsp должен
@@ -29,8 +28,16 @@
     постоянна, а длина [command] и [parameters] может быть переменной, так как скорей всего, не для всех команд возможно будет
     определить единый формат, но в любом случае, их максимальная длина будет ограничена константами. Возможно в некоторых
     командах, поле [parameters] , будет отсутствовать, тогда строка будет иметь формат [executor_id]:[command]:
-    Следующими макросами опредеяются константы, ограничивающие длину каждой части строки data и ее общую длину.
 */
+
+#ifndef COMMON_TYPES_H
+#define COMMON_TYPES_H
+
+#include <stdint.h>
+#include <stdbool.h>
+#include "freertos/FreeRTOS.h"
+
+// константы для определения максимальной длины различных полей в структуре incoming_message_t
 #define EXECUTOR_ID_LENGTH 3
 #define COMMAND_LENGTH 15
 #define PARAMETER_LENGTH 6
@@ -56,6 +63,18 @@ typedef struct {
     char parameter[PARAMETER_LENGTH]; // параметр команды
 } incoming_command_info_t;
 
+// тип данных для указателя на функцию задачи FreeRTOS, которая будет выполняться в исполнительных модулях.
+typedef void (*task_function_t)(void *pvParameters); 
+
+// структура для хранения конфигурации исполнительного модуля 
+typedef struct {
+    char *executor_id; // идентификатор исполнительного модуля
+    task_function_t executor_function; // указатель на функцию задачи, соответствующую идентификатору исполнителя
+    uint32_t stack_size; // размер стека для задачи исполнительного модуля  
+    UBaseType_t queue_length; // длина очереди для задач исполнительного модуля
+    QueueHandle_t executor_queue; // указатель на очередь команд для задачи исполнителя
+} executor_config_t;
+
 // ANSI escape codes для цветного вывода в терминале
 #define ANSI_COLOR_RESET   "\033[0m"
 #define ANSI_COLOR_BLACK   "\033[0;30m"
@@ -67,3 +86,4 @@ typedef struct {
 #define ANSI_COLOR_CYAN    "\033[0;36m"
 #define ANSI_COLOR_WHITE   "\033[0;37m"
 
+#endif // COMMON_TYPES_H

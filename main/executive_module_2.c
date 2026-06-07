@@ -4,14 +4,14 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-static const char *TAG = ANSI_COLOR_BLUE "Исполнитель_1" ANSI_COLOR_RESET;
+static const char *TAG = ANSI_COLOR_BLUE "Исполнитель_2" ANSI_COLOR_RESET;
 
-// задача Исполнительный модуль 1, которая будет получать команды от Менеджера входящих сообщений через очередь и выполнять их
-void executive_module_1(void *pvParameters)
+// задача Исполнительный модуль 2, которая будет получать команды от Менеджера входящих сообщений через очередь и выполнять их
+void executive_module_2(void *pvParameters)
 {
 
     // получить дескриптор очереди из параметров задачи
-    QueueHandle_t incoming_commands_em1_queue = (QueueHandle_t)pvParameters;
+    QueueHandle_t incoming_commands_em2_queue = (QueueHandle_t)pvParameters;
 
     // структура для хранения распарсенной информации о команде, которая будет извлекаться из очереди
     incoming_command_info_t command_info;
@@ -21,7 +21,7 @@ void executive_module_1(void *pvParameters)
 
     while (1)
     {
-        if (xQueueReceive(incoming_commands_em1_queue, &command_info, portMAX_DELAY) == pdTRUE)
+        if (xQueueReceive(incoming_commands_em2_queue, &command_info, portMAX_DELAY) == pdTRUE)
         {
             // очищаем буферы для команды и параметра перед копированием новых данных
             memset(command, 0, sizeof(command));

@@ -12,11 +12,12 @@
 </head>
 <body>
     <h1>Управление ESP32-S3</h1>
-    <button class="btn on" onclick="send('EM1:LED_ON:123456')">ВКЛЮЧИТЬ</button>
+    <button class="btn on" onclick="send('EM1:LED_ON:75')">ВКЛЮЧИТЬ</button>
     <button class="btn off" onclick="send('EM1:LED_OFF:567')">ВЫКЛЮЧИТЬ</button>
-    <button class="btn on" onclick="send('EM1:SET_BRIGHTNESS:75')">ЯРКОСТЬ</button>
+    <button class="btn on" onclick="send('EM2:SET_BRIGHTNESS:75')">ЯРКОСТЬ</button>
     <button class="btn off" onclick="send('EM1:GET_STATUS:')">СТАТУС</button>
     <button class="btn on" onclick="send('EM2:REBOOT:')">ПЕРЕЗАГРУЗКА</button>
+    <button class="btn off" onclick="send('EM3:GET_SENSOR_DATA:5')">ДАННЫЕ ДАТЧИКА</button>
 </body>
     <script>
         // Создаем путь ws://192.168.4.1/ws
