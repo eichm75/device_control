@@ -41,17 +41,31 @@ void incoming_messages_manager(void *pvParameters) {
             memset(command_info.command, 0, sizeof(command_info.command));
             memset(command_info.parameter, 0, sizeof(command_info.parameter));
             
-            // копируем первые EXECUTOR_ID_LENGTH символов из данных сообщения в буфер executor_id
-            strncpy(executor_id, message.data, EXECUTOR_ID_LENGTH);
-            
-            // извлекаем команду и параметр из данных сообщения, используя форматирование строки
-            sscanf(message.data + (EXECUTOR_ID_LENGTH + 1), "%[^:]:%s", command_info.command, command_info.parameter);
-            
+            char *saveptr;
+            char *executor_id_token = strtok_r(message.data, ":", &saveptr);
+            char *command_token = strtok_r(NULL, ":", &saveptr);
+            char *parameter_token = strtok_r(NULL, "\r\n", &saveptr);
+
+            if (executor_id_token == NULL || command_token == NULL) {
+                char invalid_message[INCOMING_MESSAGE_DATA_LENGTH+1];
+                strncpy(invalid_message, message.data, INCOMING_MESSAGE_DATA_LENGTH);
+                invalid_message[INCOMING_MESSAGE_DATA_LENGTH] = '\0';
+                ESP_LOGE("Менеджер входящих сообщений", "Получено сообщение с неверным форматом: %s", invalid_message);
+                continue;
+            }
+
+            strncpy(command_info.command, command_token, COMMAND_LENGTH);
+            if (parameter_token != NULL) {
+                strncpy(command_info.parameter, parameter_token, PARAMETER_LENGTH);
+            } else {
+                command_info.parameter[0] = '\0'; // если параметр отсутствует, устанавливаем пустую строку
+            }
+  
             found_executor = false;
 
             // ищем очередь исполнителя в списке executors_list по его идентификатору executor_id
             for (int i=0; i < EXECUTORS_COUNT; i++) {
-                if (strncmp(executor_id, executors_list[i].executor_id, EXECUTOR_ID_LENGTH) == 0) {
+                if (strncmp(executor_id_token, executors_list[i].executor_id, EXECUTOR_ID_LENGTH) == 0) {
                     // помещаем распарсенную информацию о команде в очередь для соответствующего исполнительного модуля
                     xQueueSend(executors_list[i].executor_queue, &command_info, 0); 
                     // отметим, что модуль найден
