@@ -41,7 +41,6 @@ void incoming_messages_manager(void *pvParameters) {
             memset(command_info.command, 0, sizeof(command_info.command));
             memset(command_info.parameter, 0, sizeof(command_info.parameter));
             
-            
             char *saveptr;
             char *executor_id_token = strtok_r(message.data, ":", &saveptr);
             char *command_token = strtok_r(NULL, ":", &saveptr);
