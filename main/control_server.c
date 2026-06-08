@@ -145,7 +145,10 @@ esp_err_t index_get_handler(httpd_req_t *req)
 // обработки запроса (ESP_OK для успешной обработки или ESP_FAIL для ошибки)
 esp_err_t handle_ws_req(httpd_req_t *req)
 {
+    //структура для передачи сообщения в очередь Менеджера входящих сообщений
     incoming_message_t msg;
+    // очистим поле под сообщение от мусора
+    memset(msg.data, 0, INCOMING_MESSAGE_DATA_LENGTH);
     msg.source = WEB_SERVER;
 
     // если метод запроса - GET, то это означает, что клиент только что подключился к веб-сокет серверу и завершил рукопожатие, 
@@ -156,33 +159,44 @@ esp_err_t handle_ws_req(httpd_req_t *req)
         return ESP_OK;
     }
 
-    // принимаем кадры данных websocket
-    httpd_ws_frame_t ws_pkt; // структура для хранения информации о кадре данных websocket, которая включает в себя тип кадра, флаг окончания кадра и указатель на буфер данных
-    uint8_t *buf = NULL;    // указатель на буфер для хранения данных кадра, который будет выделен динамически в зависимости от размера данных, полученных от клиента
-    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));    // инициализируем структуру ws_pkt нулями, чтобы очистить все поля и избежать мусора в данных
-    ws_pkt.type = HTTPD_WS_TYPE_TEXT;   // устанавливаем тип кадра как текстовый, так как мы ожидаем получать текстовые сообщения от клиента через веб-сокеты
+    // кадр данных websocket
+    httpd_ws_frame_t ws_pkt;
+    // указатель на динамический буфер для размещения данных из кадра
+    uint8_t *buf = NULL;
+    // инициализировать все поля нулями
+    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+    // устанавливаем тип данных из кадра как текстовый
+    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
 
-    esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);   // вызываем функцию httpd_ws_recv_frame для получения информации о размере данных кадра от клиента,
-                                                            //  передавая указатель на структуру ws_pkt и размер буфера 0, чтобы узнать размер данных
+    // узнаем длину полученного сообщения
+    // вызов функции с параметром max_len = 0, даст реальную длину данных в ws_pkt.len
+    esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
+
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "httpd_ws_recv_frame failed to get frame size: %d", ret);
         return ret;
     }
+
     if (ws_pkt.len > 0) {
-        buf = calloc(1, ws_pkt.len + 1);   // выделяем динамический буфер для хранения данных кадра, добавляя 1 байт для нулевого терминатора строки
-        ws_pkt.payload = buf;   // устанавливаем указатель на буфер в структуре ws_pkt, чтобы функция httpd_ws_recv_frame могла записать данные кадра в этот буфер
-        ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);    // вызываем функцию httpd_ws_recv_frame снова для получения данных кадра от клиента, 
-                                                                // передавая указатель на структуру ws_pkt и размер буфера, который мы выделили
+        // выделить память для полученных данных + 1 байт для \0, при выделении памяти, весь буфер будет заполнен нулями
+        buf = calloc(1, ws_pkt.len + 1);   
+        // передать указатель на буфер в структуру ws_pkt
+        ws_pkt.payload = buf;
+        // принимаем сообщение в буфер 
+        ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
+
+        // если произошла ошибка, то вывести предупреждение, освободить память и завершить функцию с ошибкой
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "httpd_ws_recv_frame failed to receive frame: %d", ret);
             free(buf);
             return ret;
         }
-
-        strncpy(msg.data, (char*)ws_pkt.payload, sizeof(msg.data));     // копируем данные из буфера в поле data структуры msg, 
-
-        xQueueSend(incoming_messages_queue, &msg, 0);                       // помещаем структуру msg в очередь входящих сообщений
         
+        // скопировать сообщение из буфера в 
+        strncpy(msg.data, (char*)ws_pkt.payload, ws_pkt.len+1); 
+        // поместить сообщение в очередь Менеджера входящих сообщений
+        xQueueSend(incoming_messages_queue, &msg, 0);
+        // освободить память от буфера 
         free(buf); 
     }
     return ESP_OK;
