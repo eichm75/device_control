@@ -19,33 +19,36 @@ void incoming_messages_manager(void *pvParameters) {
     //source_message_t source = UNKNOWN_SOURCE;
     
     // буфер для входящего сообщения
+    // ПОСЛЕ ПРОЧТЕНИЯ И ПАРСИНГА СООБЩЕНИЯ, НЕОБХОДИМО ОСВОБОДИТЬ ПАМЯТЬ !!!
     incoming_message_t message;
 
     // буфер для хранения идентификатора исполнительного модуля
-    char executor_id[EXECUTOR_ID_LENGTH]; 
-    
+    char *executor_id; 
+    char *command;
+    char *parameter;
+
     // структура для хранения распарсенной информации о команде и параметре
     incoming_command_info_t command_info;
-
+    command_info.command_ptr = NULL;
+    command_info.parameter_ptr = NULL;
     // флаг для проверки, найден ли исполнительный модуль в списке executors_list
     bool found_executor;
     
     while (1) {
         if (xQueueReceive(incoming_messages_queue, &message, portMAX_DELAY) == pdTRUE) {
-            
-            // извлекаем источник сообщения
-            //source = message.source;
-            
+
             // очищаем буферы для идентификатора исполнителя, команды и параметра перед копированием новых данных
-            memset(executor_id, 0, sizeof(executor_id));
-            memset(command_info.command, 0, sizeof(command_info.command));
-            memset(command_info.parameter, 0, sizeof(command_info.parameter));
+            //memset(executor_id, 0, sizeof(executor_id));
+            //memset(command_info.command, 0, sizeof(command_info.command));
+            //memset(command_info.parameter, 0, sizeof(command_info.parameter));
             
+
             char *saveptr;
-            char *executor_id_token = strtok_r(message.data, ":", &saveptr);
+            char *executor_id_token = strtok_r(&message.data_ptr, ":", &saveptr);
             char *command_token = strtok_r(NULL, ":", &saveptr);
             char *parameter_token = strtok_r(NULL, "\r\n", &saveptr);
 
+            /*
             if (executor_id_token == NULL || command_token == NULL) {
                 char invalid_message[INCOMING_MESSAGE_DATA_LENGTH+1];
                 strncpy(invalid_message, message.data, INCOMING_MESSAGE_DATA_LENGTH);
@@ -53,6 +56,10 @@ void incoming_messages_manager(void *pvParameters) {
                 ESP_LOGE("Менеджер входящих сообщений", "Получено сообщение с неверным форматом: %s", invalid_message);
                 continue;
             }
+            */
+
+            
+
 
             strncpy(command_info.command, command_token, COMMAND_LENGTH);
             if (parameter_token != NULL) {

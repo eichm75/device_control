@@ -147,22 +147,18 @@ esp_err_t handle_ws_req(httpd_req_t *req)
 {
     //структура для передачи сообщения в очередь Менеджера входящих сообщений
     incoming_message_t msg;
-    // очистим поле под сообщение от мусора
-    memset(msg.data, 0, INCOMING_MESSAGE_DATA_LENGTH);
-    msg.source = WEB_SERVER;
+    msg.data_ptr = NULL;
 
     // если метод запроса - GET, то это означает, что клиент только что подключился к веб-сокет серверу и завершил рукопожатие, 
     // поэтому мы выводим сообщение в лог и возвращаем ESP_OK
     if (req->method == HTTP_GET)
     {
-        ESP_LOGI(TAG, "Handshake done, the new connection was opened");
+        ESP_LOGI(TAG, "Новое соединение установлено.");
         return ESP_OK;
     }
 
     // кадр данных websocket
     httpd_ws_frame_t ws_pkt;
-    // указатель на динамический буфер для размещения данных из кадра
-    uint8_t *buf = NULL;
     // инициализировать все поля нулями
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
     // устанавливаем тип данных из кадра как текстовый
@@ -173,31 +169,32 @@ esp_err_t handle_ws_req(httpd_req_t *req)
     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);
 
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "httpd_ws_recv_frame failed to get frame size: %d", ret);
+        ESP_LOGE(TAG, "Не удалось получить размер кадра: %d", ret);
         return ret;
     }
 
     if (ws_pkt.len > 0) {
         // выделить память для полученных данных + 1 байт для \0, при выделении памяти, весь буфер будет заполнен нулями
-        buf = calloc(1, ws_pkt.len + 1);   
+        msg.data_ptr = heap_caps_calloc(1, ws_pkt.len + 1, MALLOC_CAP_SPIRAM);
+
+        if (msg.data_ptr == NULL) {
+            ESP_LOGE(TAG,"Не выделена память под входящее сообщение.");
+            return ESP_FAIL;
+        }
         // передать указатель на буфер в структуру ws_pkt
-        ws_pkt.payload = buf;
+        ws_pkt.payload = msg.data_ptr;
         // принимаем сообщение в буфер 
         ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
 
         // если произошла ошибка, то вывести предупреждение, освободить память и завершить функцию с ошибкой
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "httpd_ws_recv_frame failed to receive frame: %d", ret);
-            free(buf);
+            ESP_LOGE(TAG, "Не удалось получить данные: %d", ret);
+            free(msg.data_ptr);
             return ret;
         }
-        
-        // скопировать сообщение из буфера в 
-        strncpy(msg.data, (char*)ws_pkt.payload, ws_pkt.len+1); 
+
         // поместить сообщение в очередь Менеджера входящих сообщений
-        xQueueSend(incoming_messages_queue, &msg, 0);
-        // освободить память от буфера 
-        free(buf); 
+        xQueueSend(incoming_messages_queue, &msg, 0); 
     }
     return ESP_OK;
 }

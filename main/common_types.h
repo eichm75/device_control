@@ -55,12 +55,15 @@ typedef enum {
 typedef struct {
     source_message_t source; // источник сообщения
     char data[INCOMING_MESSAGE_DATA_LENGTH]; // данные сообщения
+    char *data_ptr // указатель на принятые данные
 } incoming_message_t;
 
 // тип данных для передачи распарсенной информации о команде от Менеджера входящих сообщений в исполнительные модули.
 typedef struct {
     char command[COMMAND_LENGTH]; // команда
     char parameter[PARAMETER_LENGTH]; // параметр команды
+    char *command_ptr;
+    char *parameter_ptr;
 } incoming_command_info_t;
 
 // тип данных для указателя на функцию задачи FreeRTOS, которая будет выполняться в исполнительных модулях.
