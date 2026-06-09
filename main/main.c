@@ -21,16 +21,7 @@ void incoming_messages_manager(void *pvParameters) {
     // буфер для входящего сообщения
     // ПОСЛЕ ПРОЧТЕНИЯ И ПАРСИНГА СООБЩЕНИЯ, НЕОБХОДИМО ОСВОБОДИТЬ ПАМЯТЬ !!!
     incoming_message_t message;
-
-    // буфер для хранения идентификатора исполнительного модуля
-    char *executor_id; 
-    char *command;
-    char *parameter;
-
-    // структура для хранения распарсенной информации о команде и параметре
-    incoming_command_info_t command_info;
-    command_info.command_ptr = NULL;
-    command_info.parameter_ptr = NULL;
+    
     // флаг для проверки, найден ли исполнительный модуль в списке executors_list
     bool found_executor;
     
@@ -58,16 +49,17 @@ void incoming_messages_manager(void *pvParameters) {
             }
             */
 
+            // структура для хранения распарсенной информации о команде и параметре
+            incoming_command_info_t command_info;
+            command_info.command_ptr = NULL;
+            command_info.parameter_ptr = NULL;
+
+            command_info.command_ptr = heap_caps_calloc(1, sizeof(*command_token)+1, MALLOC_CAP_SPIRAM);
+            command_info.parameter_ptr = heap_caps_calloc(1, sizeof(*parameter_token)+1, MALLOC_CAP_SPIRAM);
             
+            strncpy(*command_info.command_ptr, *command_token, sizeof(*command_token));
+            strncpy(*command_info.parameter_ptr, *parameter_token, sizeof(*parameter_token));
 
-
-            strncpy(command_info.command, command_token, COMMAND_LENGTH);
-            if (parameter_token != NULL) {
-                strncpy(command_info.parameter, parameter_token, PARAMETER_LENGTH);
-            } else {
-                command_info.parameter[0] = '\0'; // если параметр отсутствует, устанавливаем пустую строку
-            }
-  
             found_executor = false;
 
             // ищем очередь исполнителя в списке executors_list по его идентификатору executor_id
