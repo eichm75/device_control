@@ -9,31 +9,28 @@ static const char *TAG = ANSI_COLOR_BLUE "Исполнитель_2" ANSI_COLOR_R
 // задача Исполнительный модуль 2, которая будет получать команды от Менеджера входящих сообщений через очередь и выполнять их
 void executive_module_2(void *pvParameters)
 {
-
-    // получить дескриптор очереди из параметров задачи
     QueueHandle_t incoming_commands_em2_queue = (QueueHandle_t)pvParameters;
-
-    // структура для хранения распарсенной информации о команде, которая будет извлекаться из очереди
     incoming_command_info_t command_info;
-
-    char command[COMMAND_LENGTH + 1];     // буфер для хранения команды
-    char parameter[PARAMETER_LENGTH + 1]; // буфер для хранения параметра команды
 
     while (1)
     {
         if (xQueueReceive(incoming_commands_em2_queue, &command_info, portMAX_DELAY) == pdTRUE)
         {
-            // очищаем буферы для команды и параметра перед копированием новых данных
-            memset(command, 0, sizeof(command));
-            memset(parameter, 0, sizeof(parameter));
+            // РАБОТАЕМ НАПРЯМУЮ! Никаких calloc, strncpy и лишних free(command)
+            ESP_LOGI(TAG, ANSI_COLOR_BLUE "Получена команда: %s, с параметром: %s" ANSI_COLOR_RESET, 
+                     command_info.command_ptr, 
+                     command_info.parameter_ptr);
 
-            // копируем команду и параметр из структуры command_info в соответствующие буферы
-            strncpy(command, command_info.command, COMMAND_LENGTH);
-            command[COMMAND_LENGTH - 1] = '\0';
-            strncpy(parameter, command_info.parameter, PARAMETER_LENGTH);
-            parameter[PARAMETER_LENGTH - 1] = '\0';
+            // Твоя будущая логика разбора команд через strcmp:
+            if (strcmp(command_info.command_ptr, "SET_VOLUME") == 0) {
+                // adau_set_volume(atoi(command_info.parameter_ptr));
+            }
 
-            ESP_LOGI(TAG, ANSI_COLOR_BLUE "Получена команда: %s, с параметром: %s" ANSI_COLOR_RESET, command, parameter);
+            // ОЧИСТКА ПАМЯТИ: Освобождаем ТО, ЧТО ВЫДЕЛЯЛ МЕНЕДЖЕР через strdup
+            // Это должно быть строго ВНУТРИ блока if (xQueueReceive ... == pdTRUE),
+            // чтобы мы не пытались удалить мусорные указатели, если очередь вернула ошибку.
+            free(command_info.command_ptr);
+            free(command_info.parameter_ptr);
         }
     }
 }

@@ -15,6 +15,7 @@
 #include "lwip/sys.h"
 
 #include "common_types.h"
+#include "esp_heap_caps.h"
 
 httpd_handle_t server = NULL;
 
@@ -157,7 +158,7 @@ esp_err_t handle_ws_req(httpd_req_t *req)
         return ESP_OK;
     }
 
-    // кадр данных websocket
+    // объявляем структуру для приема кадра данных от клиента
     httpd_ws_frame_t ws_pkt;
     // инициализировать все поля нулями
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
@@ -175,14 +176,14 @@ esp_err_t handle_ws_req(httpd_req_t *req)
 
     if (ws_pkt.len > 0) {
         // выделить память для полученных данных + 1 байт для \0, при выделении памяти, весь буфер будет заполнен нулями
-        msg.data_ptr = heap_caps_calloc(1, ws_pkt.len + 1, MALLOC_CAP_SPIRAM);
+        msg.data_ptr = calloc(1, ws_pkt.len + 1);
 
         if (msg.data_ptr == NULL) {
             ESP_LOGE(TAG,"Не выделена память под входящее сообщение.");
             return ESP_FAIL;
         }
         // передать указатель на буфер в структуру ws_pkt
-        ws_pkt.payload = msg.data_ptr;
+        ws_pkt.payload = (void*)msg.data_ptr;
         // принимаем сообщение в буфер 
         ret = httpd_ws_recv_frame(req, &ws_pkt, ws_pkt.len);
 
@@ -195,6 +196,8 @@ esp_err_t handle_ws_req(httpd_req_t *req)
 
         // поместить сообщение в очередь Менеджера входящих сообщений
         xQueueSend(incoming_messages_queue, &msg, 0); 
+
+        ESP_LOGI(TAG, "Получено сообщение: %s", msg.data_ptr);
     }
     return ESP_OK;
 }

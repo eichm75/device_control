@@ -37,31 +37,16 @@
 #include <stdbool.h>
 #include "freertos/FreeRTOS.h"
 
-// константы для определения максимальной длины различных полей в структуре incoming_message_t
-#define EXECUTOR_ID_LENGTH 3
-#define COMMAND_LENGTH 15
-#define PARAMETER_LENGTH 6
-#define INCOMING_MESSAGE_DATA_LENGTH (EXECUTOR_ID_LENGTH + COMMAND_LENGTH + PARAMETER_LENGTH + 2) // +2 для разделителей ":"
-#define INCOMING_COMMAND_INFO_LENGTH (COMMAND_LENGTH + PARAMETER_LENGTH + 1) // +1 для разделителя ":"
-
-// источник поступившего сообщения
-typedef enum {
-    UNKNOWN_SOURCE = 0,
-    WEB_SERVER,
-    CONTROL_PANEL
-} source_message_t;
+// максимальая длина управляющего сообщения
+#define INCOMING_MESSAGE_DATA_LENGTH 128
 
 // тип данных для передачи управляющих сообщений от модулей управления устройством в Менеджер входящих сообщений. 
 typedef struct {
-    source_message_t source; // источник сообщения
-    char data[INCOMING_MESSAGE_DATA_LENGTH]; // данные сообщения
-    char *data_ptr // указатель на принятые данные
+    char *data_ptr; // указатель на принятые данные
 } incoming_message_t;
 
 // тип данных для передачи распарсенной информации о команде от Менеджера входящих сообщений в исполнительные модули.
 typedef struct {
-    char command[COMMAND_LENGTH]; // команда
-    char parameter[PARAMETER_LENGTH]; // параметр команды
     char *command_ptr;
     char *parameter_ptr;
 } incoming_command_info_t;

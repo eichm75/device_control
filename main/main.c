@@ -26,45 +26,53 @@ void incoming_messages_manager(void *pvParameters) {
     bool found_executor;
     
     while (1) {
+
+        message.data_ptr = NULL;
         if (xQueueReceive(incoming_messages_queue, &message, portMAX_DELAY) == pdTRUE) {
 
-            // очищаем буферы для идентификатора исполнителя, команды и параметра перед копированием новых данных
-            //memset(executor_id, 0, sizeof(executor_id));
-            //memset(command_info.command, 0, sizeof(command_info.command));
-            //memset(command_info.parameter, 0, sizeof(command_info.parameter));
-            
+            ESP_LOGI(TAG, "Получено новое сообщение для обработки. %s", message.data_ptr);
 
+            // получаем указатели на части сообщения, разделенные символом ":"
             char *saveptr;
-            char *executor_id_token = strtok_r(&message.data_ptr, ":", &saveptr);
+            char *executor_id_token = strtok_r(message.data_ptr, ":", &saveptr);
             char *command_token = strtok_r(NULL, ":", &saveptr);
             char *parameter_token = strtok_r(NULL, "\r\n", &saveptr);
 
-            /*
+            // если исполнитель или команда не были получены
+            // значит выводим ошибку, освобождаем память и пропускаем это сообщение
             if (executor_id_token == NULL || command_token == NULL) {
-                char invalid_message[INCOMING_MESSAGE_DATA_LENGTH+1];
-                strncpy(invalid_message, message.data, INCOMING_MESSAGE_DATA_LENGTH);
-                invalid_message[INCOMING_MESSAGE_DATA_LENGTH] = '\0';
-                ESP_LOGE("Менеджер входящих сообщений", "Получено сообщение с неверным форматом: %s", invalid_message);
+                ESP_LOGE("Менеджер входящих сообщений", "Получено сообщение с неверным форматом: %s", message.data_ptr);
+                free(message.data_ptr);
                 continue;
             }
-            */
 
-            // структура для хранения распарсенной информации о команде и параметре
+            // структура для хранения и передачи распарсенной информации о команде и параметре в очередь исполнительного модуля
             incoming_command_info_t command_info;
             command_info.command_ptr = NULL;
             command_info.parameter_ptr = NULL;
-
-            command_info.command_ptr = heap_caps_calloc(1, sizeof(*command_token)+1, MALLOC_CAP_SPIRAM);
-            command_info.parameter_ptr = heap_caps_calloc(1, sizeof(*parameter_token)+1, MALLOC_CAP_SPIRAM);
             
-            strncpy(*command_info.command_ptr, *command_token, sizeof(*command_token));
-            strncpy(*command_info.parameter_ptr, *parameter_token, sizeof(*parameter_token));
+            command_info.command_ptr = strdup(command_token);
+
+            if (parameter_token != NULL) {
+                command_info.parameter_ptr = strdup(parameter_token);
+            } else {
+                command_info.parameter_ptr = strdup("");
+            }
+
+            // если память не выделилась, то выводим ошибку, освобождаем память и пропускаем это сообщение
+            if (command_info.command_ptr == NULL || command_info.parameter_ptr == NULL) {
+                ESP_LOGE("Менеджер входящих сообщений", "Не выделена память под команду или параметр.");
+                free(command_info.command_ptr);
+                free(command_info.parameter_ptr);
+                free(message.data_ptr);
+                continue;
+            }
 
             found_executor = false;
 
             // ищем очередь исполнителя в списке executors_list по его идентификатору executor_id
             for (int i=0; i < EXECUTORS_COUNT; i++) {
-                if (strncmp(executor_id_token, executors_list[i].executor_id, EXECUTOR_ID_LENGTH) == 0) {
+                if (strcmp(executor_id_token, executors_list[i].executor_id) == 0) {
                     // помещаем распарсенную информацию о команде в очередь для соответствующего исполнительного модуля
                     xQueueSend(executors_list[i].executor_queue, &command_info, 0); 
                     // отметим, что модуль найден
@@ -74,11 +82,13 @@ void incoming_messages_manager(void *pvParameters) {
             }
 
             if (!found_executor) {
-                char unknown_executor_message[INCOMING_MESSAGE_DATA_LENGTH+1];
-                strncpy(unknown_executor_message, message.data, INCOMING_MESSAGE_DATA_LENGTH);
-                unknown_executor_message[INCOMING_MESSAGE_DATA_LENGTH] = '\0';
-                ESP_LOGE("Менеджер входящих сообщений", "Получено сообщение для неизвестного исполнителя: %s", unknown_executor_message);
+                ESP_LOGE("Менеджер входящих сообщений", "Получено сообщение для неизвестного исполнителя: %s", executor_id_token);
+                free(command_info.command_ptr);
+                free(command_info.parameter_ptr);
             }
+            
+            // после обработки сообщения, освобождаем память, выделенную для него
+            free(message.data_ptr);
         }
     }
 }
