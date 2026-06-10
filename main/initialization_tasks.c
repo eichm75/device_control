@@ -29,7 +29,7 @@ executor_config_t executors_list[] = {
 const int EXECUTORS_COUNT = sizeof(executors_list) / sizeof(executor_config_t);
 
 // функция для создания задач исполнительных модулей и их очередей
-void start_executors_tasks(void)
+esp_err_t start_executors_tasks(void)
 {
 // просмотреть весь список исполнительных модулей
     for (int i=0; i < EXECUTORS_COUNT; i++) {
@@ -38,7 +38,7 @@ void start_executors_tasks(void)
         executors_list[i].executor_queue = xQueueCreate(executors_list[i].queue_length, sizeof(incoming_command_info_t));
         if (executors_list[i].executor_queue == 0) {
             ESP_LOGE(TAG, "Не удалось создать очередь для исполнителя: %s", executors_list[i].executor_id);
-            continue;
+            return ESP_FAIL;
         }
 
         // создаем задачу исполнителя, передавая ему функцию и дескриптор очереди
@@ -53,23 +53,34 @@ void start_executors_tasks(void)
             ESP_LOGI(TAG, "Задача для исполнителя %s успешно создана", executors_list[i].executor_id);
         } else {
             ESP_LOGE(TAG, "Не удалось создать задачу для исполнителя: %s", executors_list[i].executor_id);
+            return ESP_FAIL;
         }
     }
+    return ESP_OK;
 }
 
 // дескриптор очереди для Менеджера входящих сообщений
 QueueHandle_t incoming_messages_queue;
 
 // функция для создания задачи Менеджера входящих сообщений и его очереди
-void start_incoming_messages_manager(void)
+esp_err_t start_incoming_messages_manager(void)
 {
     // создаем очередь для входящих сообщений для Менеджера входящих команд.
     incoming_messages_queue = xQueueCreate(10, sizeof(incoming_message_t));
+    if (incoming_messages_queue == 0) {
+        ESP_LOGE(TAG, "Не удалось создать очередь для Менеджера входящих сообщений");
+        return ESP_FAIL;
+    }
 
     // передать дескриптор очереди входящих сообщений в модуль control_server, чтобы он мог помещать в нее сообщения, полученные от клиентов через веб-сокеты
     set_incoming_messages_queue(incoming_messages_queue);
 
 
     // создаем задачу Менеджер входящих сообщений
-    xTaskCreate(incoming_messages_manager, "incoming_messages_manager", 4096, incoming_messages_queue, 5, NULL);
+    BaseType_t ret = xTaskCreate(incoming_messages_manager, "incoming_messages_manager", 4096, incoming_messages_queue, 5, NULL);
+    if (ret != pdPASS) {
+        ESP_LOGE(TAG, "Не удалось создать задачу для Менеджера входящих сообщений");
+        return ESP_FAIL;
+    }
+    return ESP_OK;
 }

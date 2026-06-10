@@ -8,7 +8,7 @@ extern const int EXECUTORS_COUNT;
 
 extern QueueHandle_t incoming_messages_queue;
 
-void start_executors_tasks(void);
-void start_incoming_messages_manager(void);
+esp_err_t start_executors_tasks(void);
+esp_err_t start_incoming_messages_manager(void);
 
 #endif // INITIALIZATION_TASKS_H
