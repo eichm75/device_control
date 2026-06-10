@@ -23,6 +23,7 @@ void app_main(void)
     
     // запускаем задачи исполнительных модулей
     start_executors_tasks();
+    
     // запускаем задачу Менеджера входящих сообщений
     start_incoming_messages_manager();
 
