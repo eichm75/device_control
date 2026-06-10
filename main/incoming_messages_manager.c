@@ -1,17 +1,16 @@
 #include <stdio.h>
 #include "control_server.h"
-#include "executors_list.h"
+#include "initialization_tasks.h"
 #include "common_types.h"
 #include "esp_log.h"
 #include <string.h>
 
 static const char *TAG = "Менеджер входящих сообщений";
 
-// очередь для Менеджера входящих сообщений
-QueueHandle_t incoming_messages_queue;
-
 void incoming_messages_manager(void *pvParameters)
 {
+    // получаем дескриптор очереди входящих сообщений, который был передан при создании задачи Менеджера входящих сообщений
+    QueueHandle_t incoming_messages_queue = (QueueHandle_t)pvParameters;
     // буфер для входящего сообщения
     // ПОСЛЕ ПРОЧТЕНИЯ И ПАРСИНГА СООБЩЕНИЯ, НЕОБХОДИМО ОСВОБОДИТЬ ПАМЯТЬ !!!
     incoming_message_t message;
@@ -87,15 +86,4 @@ void incoming_messages_manager(void *pvParameters)
     }
 }
 
-void start_incoming_messages_manager(void)
-{
-    // создаем очередь для входящих сообщений для Менеджера входящих команд.
-    incoming_messages_queue = xQueueCreate(10, sizeof(incoming_message_t));
 
-    // передать дескриптор очереди входящих сообщений в модуль control_server, чтобы он мог помещать в нее сообщения, полученные от клиентов через веб-сокеты
-    set_incoming_messages_queue(incoming_messages_queue);
-
-
-    // создаем задачу Менеджер входящих сообщений
-    xTaskCreate(incoming_messages_manager, "incoming_messages_manager", 4096, NULL, 5, NULL);
-}
