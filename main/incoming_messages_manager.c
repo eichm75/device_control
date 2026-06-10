@@ -5,12 +5,13 @@
 #include "esp_log.h"
 #include <string.h>
 
-static const char *TAG = "Менеджер входящих сообщений";
+static const char *TAG = ANSI_COLOR_CYAN "Менеджер входящих сообщений" ANSI_COLOR_RESET;
 
 void incoming_messages_manager(void *pvParameters)
 {
     // получаем дескриптор очереди входящих сообщений, который был передан при создании задачи Менеджера входящих сообщений
     QueueHandle_t incoming_messages_queue = (QueueHandle_t)pvParameters;
+    
     // буфер для входящего сообщения
     // ПОСЛЕ ПРОЧТЕНИЯ И ПАРСИНГА СООБЩЕНИЯ, НЕОБХОДИМО ОСВОБОДИТЬ ПАМЯТЬ !!!
     incoming_message_t message;
@@ -22,8 +23,6 @@ void incoming_messages_manager(void *pvParameters)
 
         message.data_ptr = NULL;
         if (xQueueReceive(incoming_messages_queue, &message, portMAX_DELAY) == pdTRUE) {
-
-            ESP_LOGI(TAG, "Получено новое сообщение для обработки. %s", message.data_ptr);
 
             // получаем указатели на части сообщения, разделенные символом ":"
             char *saveptr;

@@ -24,7 +24,7 @@ httpd_handle_t server = NULL;
 #define EXAMPLE_ESP_WIFI_CHANNEL   CONFIG_ESP_WIFI_CHANNEL
 #define EXAMPLE_MAX_STA_CONN       CONFIG_ESP_MAX_STA_CONN
 
-static const char *TAG = "Control Server";
+static const char *TAG = ANSI_COLOR_CYAN"Сервер управления"ANSI_COLOR_RESET;
 static QueueHandle_t incoming_messages_queue;
 
 // функция получения дескриптора очереди входящих сообщений, объявленной в main.c

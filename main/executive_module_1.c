@@ -4,7 +4,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-static const char *TAG = ANSI_COLOR_BLUE "Исполнитель_1" ANSI_COLOR_RESET;
+static const char *TAG = ANSI_COLOR_CYAN "Исполнитель_1" ANSI_COLOR_RESET;
 
 // задача Исполнительный модуль 1, которая будет получать команды от Менеджера входящих сообщений через очередь и выполнять их
 void executive_module_1(void *pvParameters)
@@ -17,7 +17,7 @@ void executive_module_1(void *pvParameters)
         if (xQueueReceive(incoming_commands_em1_queue, &command_info, portMAX_DELAY) == pdTRUE)
         {
             // РАБОТАЕМ НАПРЯМУЮ! Никаких calloc, strncpy и лишних free(command)
-            ESP_LOGI(TAG, ANSI_COLOR_BLUE "Получена команда: %s, с параметром: %s" ANSI_COLOR_RESET, 
+            ESP_LOGI(TAG, ANSI_COLOR_CYAN "Получена команда: %s, с параметром: %s" ANSI_COLOR_RESET, 
                      command_info.command_ptr, 
                      command_info.parameter_ptr);
 
