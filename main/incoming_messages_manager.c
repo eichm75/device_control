@@ -24,6 +24,10 @@ void incoming_messages_manager(void *pvParameters)
         message.data_ptr = NULL;
         if (xQueueReceive(incoming_messages_queue, &message, portMAX_DELAY) == pdTRUE) {
 
+            // временная копия строки сообщения, которая будет изменяться функцией strtok_r, 
+            //чтобы не потерять оригинальную строку для логирования
+            char *copy_of_message = strdup(message.data_ptr);
+
             // получаем указатели на части сообщения, разделенные символом ":"
             char *saveptr;
             char *executor_id_token = strtok_r(message.data_ptr, ":", &saveptr);
@@ -33,21 +37,26 @@ void incoming_messages_manager(void *pvParameters)
             // если исполнитель или команда не были получены
             // значит выводим ошибку, освобождаем память и пропускаем это сообщение
             if (executor_id_token == NULL || command_token == NULL) {
-                ESP_LOGE(TAG, "Получено сообщение с неверным форматом: %s", message.data_ptr);
+                ESP_LOGE(TAG, "Получено сообщение с неверным форматом: %s", copy_of_message);
                 free(message.data_ptr);
+                free(copy_of_message);
                 continue;
-            }
+            } 
+            // освобождаем временную копию строки, так как она больше не нужна
+            free(copy_of_message); 
 
             // структура для хранения и передачи распарсенной информации о команде и параметре в очередь исполнительного модуля
             incoming_command_info_t command_info;
             command_info.command_ptr = NULL;
             command_info.parameter_ptr = NULL;
             
+            // создать копии команды и параметра в структуре command_info
             command_info.command_ptr = strdup(command_token);
 
             if (parameter_token != NULL) {
                 command_info.parameter_ptr = strdup(parameter_token);
             } else {
+                // если в сообщении нет параметра, то запишем в parameter_ptr пустую строку
                 command_info.parameter_ptr = strdup("");
             }
 
@@ -75,6 +84,7 @@ void incoming_messages_manager(void *pvParameters)
 
             if (!found_executor) {
                 ESP_LOGE(TAG, "Получено сообщение для неизвестного исполнителя: %s", executor_id_token);
+                // раз команда и параметр не были отправлены, то освобождаем память, выделенную для них
                 free(command_info.command_ptr);
                 free(command_info.parameter_ptr);
             }

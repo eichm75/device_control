@@ -17,17 +17,21 @@
 #include "common_types.h"
 #include "esp_heap_caps.h"
 
+
 httpd_handle_t server = NULL;
 
+// настройки Wi-Fi точки доступа
 #define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
 #define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
 #define EXAMPLE_ESP_WIFI_CHANNEL   CONFIG_ESP_WIFI_CHANNEL
 #define EXAMPLE_MAX_STA_CONN       CONFIG_ESP_MAX_STA_CONN
 
 static const char *TAG = ANSI_COLOR_CYAN"Сервер управления"ANSI_COLOR_RESET;
+
+// дескриптор очереди для Менеджера входящих сообщений
 static QueueHandle_t incoming_messages_queue;
 
-// функция получения дескриптора очереди входящих сообщений, объявленной в main.c
+// функция получения дескриптора очереди входящих сообщений
 void set_incoming_messages_queue(QueueHandle_t queue)
 {
     incoming_messages_queue = queue;
@@ -154,7 +158,7 @@ esp_err_t handle_ws_req(httpd_req_t *req)
     // поэтому мы выводим сообщение в лог и возвращаем ESP_OK
     if (req->method == HTTP_GET)
     {
-        ESP_LOGI(TAG, "Новое соединение установлено.");
+        ESP_LOGI(TAG, ANSI_COLOR_CYAN"Новое соединение установлено."ANSI_COLOR_RESET);
         return ESP_OK;
     }
 
@@ -197,12 +201,12 @@ esp_err_t handle_ws_req(httpd_req_t *req)
         // поместить сообщение в очередь Менеджера входящих сообщений
         xQueueSend(incoming_messages_queue, &msg, 0); 
 
-        ESP_LOGI(TAG, "Получено сообщение: %s", msg.data_ptr);
     }
     return ESP_OK;
 }
 
-// функция для настройки и запуска веб-сокет сервера, которая регистрирует обработчики URI для корневого URI "/" и URI "/ws", и возвращает дескриптор сервера
+// функция для настройки и запуска веб-сокет сервера, которая регистрирует обработчики URI для корневого URI "/" и URI "/ws", 
+//и возвращает дескриптор сервера
 httpd_handle_t setup_websocket_server(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -233,7 +237,7 @@ void start_control_server(void)
     // инициализируем SPIFFS, который будет использоваться для хранения файлов веб-сокет сервера
     init_spiffs();
     // инициализируем Wi-Fi в режиме точки доступа, который будет использоваться для подключения клиентов к веб-сокет серверу
-    ESP_LOGI(TAG, "ESP_WIFI_MODE_AP");
+    ESP_LOGI(TAG, "Включен режим точки доступа WiFi");
     // функция для инициализации Wi-Fi в режиме точки доступа
     wifi_init_softap();
     // настраиваем и запускаем веб-сокет сервер, который будет обрабатывать запросы от клиентов и отправлять им данные через веб-сокеты
