@@ -10,5 +10,6 @@ extern QueueHandle_t incoming_messages_queue;
 
 esp_err_t start_executors_tasks(void);
 esp_err_t start_incoming_messages_manager(void);
+esp_err_t start_feedback_messages_manager(void);
 
 #endif // INITIALIZATION_TASKS_H

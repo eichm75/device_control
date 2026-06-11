@@ -7,7 +7,7 @@
 #include "initialization_tasks.h"
 #include "incoming_messages_manager.h"
 
-static const char *TAG = "Device Control Main";
+//static const char *TAG = "Device Control Main";
 
 void app_main(void)
 {

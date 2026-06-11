@@ -18,6 +18,10 @@ typedef struct {
     char *parameter_ptr;
 } incoming_command_info_t;
 
+typedef struct {
+    char *data_ptr; // указатель на строку сообщения обратной связи
+} feedback_message_t;
+
 // тип данных для указателя на функцию задачи FreeRTOS, которая будет выполняться исполнительным модулем.
 typedef void (*task_function_t)(void *pvParameters); 
 

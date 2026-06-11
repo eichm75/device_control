@@ -4,6 +4,7 @@
 #include "executive_module_2.h"
 #include "incoming_messages_manager.h"
 #include "control_server.h"
+#include "feedback_messages_manager.h"
 
 const char *TAG = "Инициализация задач";
 
@@ -80,6 +81,28 @@ esp_err_t start_incoming_messages_manager(void)
     BaseType_t ret = xTaskCreate(incoming_messages_manager, "incoming_messages_manager", 4096, incoming_messages_queue, 5, NULL);
     if (ret != pdPASS) {
         ESP_LOGE(TAG, "Не удалось создать задачу для Менеджера входящих сообщений");
+        return ESP_FAIL;
+    }
+    return ESP_OK;
+}
+
+// дескриптор очереди для Менеджера сообщений обратной связи
+QueueHandle_t feedback_messages_queue;
+
+// функция для создания задачи Менеджера сообщений обратной связи и его очереди
+esp_err_t start_feedback_messages_manager(void)
+{
+    // создаем очередь для сообщений обратной связи для Менеджера сообщений обратной связи.
+    feedback_messages_queue = xQueueCreate(10, sizeof(feedback_message_t));
+    if (feedback_messages_queue == 0) {
+        ESP_LOGE(TAG, "Не удалось создать очередь для Менеджера сообщений обратной связи");
+        return ESP_FAIL;
+    }
+
+    // создаем задачу Менеджер сообщений обратной связи
+    BaseType_t ret = xTaskCreate(feedback_messages_manager, "feedback_messages_manager", 4096, feedback_messages_queue, 5, NULL);
+    if (ret != pdPASS) {
+        ESP_LOGE(TAG, "Не удалось создать задачу для Менеджера сообщений обратной связи");
         return ESP_FAIL;
     }
     return ESP_OK;
