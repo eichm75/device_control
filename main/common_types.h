@@ -30,6 +30,26 @@ typedef struct {
     QueueHandle_t executor_queue; // указатель на очередь команд для задачи исполнителя
 } executor_config_t;
 
+// возврат функции-обработчика команды
+typedef enum {
+    CMD_RES_OK = 0,
+    CMD_RES_ERROR,
+    CMD_RES_ASYNC
+} cmd_result_t;
+
+// указатель на функцию-обработчик команды, которая принимает строку параметра и возвращает результат выполнения команды.
+typedef cmd_result_t (*command_handler_t)(const char *parameter); 
+
+// структура хранения имени команды и ее функции-обработчика
+typedef struct {
+    const char *command_name; // имя команды, например "SET_VOLUME"
+    command_handler_t handler; // указатель на функцию-обработчик команды
+} command_entry_t;
+
+
+
+
+
 // ANSI escape codes для цветного вывода в терминале
 #define ANSI_COLOR_RESET   "\033[0m"
 #define ANSI_COLOR_BLACK   "\033[0;30m"
